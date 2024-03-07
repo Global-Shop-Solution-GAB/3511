@@ -1,0 +1,289 @@
+Program.Sub.ScreenSU.Start
+gui.F_WC_MAINT..create
+gui.F_WC_MAINT..caption("Workcenter Maintenance")
+gui.F_WC_MAINT..size(4900,6700)
+gui.F_WC_MAINT..minx(0)
+gui.F_WC_MAINT..miny(0)
+gui.F_WC_MAINT..position(0,0)
+gui.F_WC_MAINT..event(unload,f_wc_maint_unload)
+gui.F_WC_MAINT..alwaysontop(False)
+gui.F_WC_MAINT..fontname("Arial")
+gui.F_WC_MAINT..fontsize(8)
+gui.F_WC_MAINT..forecolor(0)
+gui.F_WC_MAINT..fontstyle(,,,,)
+gui.F_WC_MAINT..BackColor(-2147483633)
+gui.F_WC_MAINT..controlbox(True)
+gui.F_WC_MAINT..maxbutton(False)
+gui.F_WC_MAINT..minbutton(True)
+gui.F_WC_MAINT..mousepointer(0)
+gui.F_WC_MAINT..moveable(True)
+gui.F_WC_MAINT..sizeable(False)
+gui.F_WC_MAINT..ShowInTaskBar(True)
+gui.F_WC_MAINT..titlebar(True)
+gui.F_WC_MAINT.gsfgWC.create(gsflexgrid)
+gui.F_WC_MAINT.gsfgWC.FixedRows(0)
+gui.F_WC_MAINT.gsfgWC.FixedCols(0)
+gui.F_WC_MAINT.gsfgWC.visible(True)
+gui.F_WC_MAINT.gsfgWC.size(4450,5500)
+gui.F_WC_MAINT.gsfgWC.zorder(0)
+gui.F_WC_MAINT.gsfgWC.position(100,100)
+gui.F_WC_MAINT.gsfgWC.enabled(True)
+gui.F_WC_MAINT.cmdSave.create(button)
+gui.F_WC_MAINT.cmdSave.caption("Save")
+gui.F_WC_MAINT.cmdSave.visible(True)
+gui.F_WC_MAINT.cmdSave.size(855,375)
+gui.F_WC_MAINT.cmdSave.zorder(0)
+gui.F_WC_MAINT.cmdSave.position(100,5700)
+gui.F_WC_MAINT.cmdSave.enabled(True)
+gui.F_WC_MAINT.cmdSave.fontname("Arial")
+gui.F_WC_MAINT.cmdSave.fontsize(8)
+gui.F_WC_MAINT.cmdSave.event(click,cmdsave_click)
+gui.F_WC_MAINT.cmdSave.defaultvalue("")
+gui.F_WC_MAINT.cmdSave.controlgroup(0)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.Global.sWC.Declare(String)
+Variable.Global.sSQL.Declare(String)
+Variable.Global.iRows.Declare(Long,0)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+'Hook 14860 and 14840
+V.Local.sError.Declare(String)
+V.Local.sRet.Declare(String)
+
+'Hook 14840: Script 1 Name
+F.Intrinsic.Control.If(V.caller.Hook,=,14840)
+	V.Passed.000068.Set("Insp Check")
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+'gets WC and if there isnt won it asks to select all wcs
+V.Global.sWC.Set(V.Passed.000005)
+F.Intrinsic.Control.If(V.Global.sWC,=,"")
+	F.Intrinsic.UI.Msgbox("No workcenter is selected.  Load all workcenters?","Load all Workcenters",1,V.Local.sRet)
+	F.Intrinsic.Control.If(V.Local.sRet,=,2)
+		F.Intrinsic.Control.End
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+F.Intrinsic.Control.CallSub(Buildstyle)
+F.Intrinsic.Control.CallSub(Loadwc)
+Gui.F_WC_MAINT..Show
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_wc_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+program.sub.f_wc_maint_unload.start
+F.Intrinsic.Control.SetErrorHandler("f_wc_maint_unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("f_wc_maint_unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.f_wc_maint_unload.end
+
+program.sub.cmdsave_click.start
+F.Intrinsic.Control.SetErrorHandler("cmdsave_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iR.Declare(Long,1)
+V.Local.sRow.Declare(String)
+
+Gui.F_WC_MAINT..Enabled(False)
+Gui.F_WC_MAINT..Visible(False)
+
+F.Intrinsic.UI.InvokeWaitDialog("Saving...","Save")
+'saves all rows
+F.ODBC.Connection!conx.OpenLocalRecordsetRW("rstSave",V.Global.sSQL)
+F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstSave.EOF,=,True)
+	Gui.F_WC_MAINT.gsfgWC.ReadRow(V.local.iR,V.Local.sRow)
+	F.Intrinsic.String.split(V.Local.sRow,"*!*",V.Local.sRow)
+	'checks to see if the field is checked or not
+	F.Intrinsic.Control.If(V.Local.sRow(2).Long,<>,V.ODBC.conx!rstSave.FieldValLong!INSP_FLAG)
+		F.Intrinsic.Control.If(V.Local.sRow(2),=,"1")
+			F.ODBC.conx!rstSave.Set!INSP_FLAG(1)
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstSave.Set!INSP_FLAG(0)
+		F.Intrinsic.Control.EndIf
+		F.ODBC.conx!rstSave.Update
+	F.Intrinsic.Control.EndIf
+	F.ODBC.conx!rstSave.MoveNext
+	F.Intrinsic.Math.Add(V.Local.iR,1,V.Local.iR)
+F.Intrinsic.Control.Loop
+F.ODBC.conx!rstSave.Close
+
+F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.CallSub("f_wc_maint_unload")
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdsave_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_wc_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.cmdsave_click.end
+
+Program.Sub.LoadWC.Start
+F.Intrinsic.Control.SetErrorHandler("LoadWC_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iR.Declare(Long)
+V.Local.sTemp.Declare(String)
+
+F.Intrinsic.UI.InvokeWaitDialog("Loading...")
+F.Intrinsic.Control.CallSub("UpdateWCs")
+'if blank gather all wcs if not select the specific wc
+F.Intrinsic.Control.If(V.Global.sWC,=,"")
+	V.Global.sSQL.Set("SELECT * FROM GCG_3511_WC_MAINT ORDER BY WC ASC")
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("SELECT * FROM GCG_3511_WC_MAINT WHERE WC='{0}'",V.Global.sWC,V.Global.sSQL)
+F.Intrinsic.Control.EndIf
+F.ODBC.Connection!conx.OpenRecordsetRO("rstWC",V.Global.sSQL)
+Gui.F_WC_MAINT.gsfgWC.LoadRecordset("conx!rstWC",1)
+F.ODBC.conx!rstWC.Close
+'subtract the blank row that is generated from loadrecordset and set the correct row count
+F.Intrinsic.Math.Sub(V.Screen.F_WC_MAINT!gsfgWC.Rows,1,V.Global.iRows)
+Gui.F_WC_MAINT.gsfgWC.Rows(V.Global.iRows)
+'subtract the fixed row to get only the data rows
+F.Intrinsic.Math.Sub(V.Global.iRows,1,V.Global.iRows)
+
+F.Intrinsic.UI.CloseWaitDialog
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("LoadWC_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_wc_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.LoadWC.End
+
+Program.Sub.UpdateWCs.Start
+F.Intrinsic.Control.SetErrorHandler("UpdateWCs_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'compares wc maint to workcenters to grab and update wc maint with the newest list of work centers
+F.ODBC.Connection!conx.OpenRecordsetRO("rstWCs","SELECT MACHINE, WC_NAME FROM V_WORKCENTERS WHERE MACHINE NOT IN (SELECT WC FROM GCG_3511_WC_MAINT) ORDER BY MACHINE ASC")
+F.ODBC.Connection!conx.OpenRecordsetRW("rstWCMaint","SELECT * FROM GCG_3511_WC_MAINT")
+F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstWCs.EOF,=,True)
+	F.ODBC.conx!rstWCMaint.AddNew
+	F.ODBC.conx!rstWCMaint.Set!WC(V.ODBC.conx!rstWCs.FieldValTrim!MACHINE)
+	F.ODBC.conx!rstWCMaint.Set!DESCR(V.ODBC.conx!rstWCs.FieldValTrim!WC_NAME)
+	F.ODBC.conx!rstWCMaint.Set!INSP_FLAG(0)
+	F.ODBC.conx!rstWCMaint.Update
+	F.ODBC.conx!rstWCs.MoveNext
+F.Intrinsic.Control.Loop
+F.ODBC.conx!rstWCs.Close
+F.ODBC.conx!rstWCMaint.Close
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("UpdateWCs_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_wc_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.UpdateWCs.End
+
+Program.Sub.Buildstyle.Start
+F.Intrinsic.Control.SetErrorHandler("Buildstyle_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iC.Declare(Long)
+
+Gui.F_WC_MAINT.gsfgWC.Rows(2)
+Gui.F_WC_MAINT.gsfgWC.Cols(3)
+Gui.F_WC_MAINT.gsfgWC.TextMatrix(0,0,"WC")
+Gui.F_WC_MAINT.gsfgWC.ColWidth(0,"800")
+Gui.F_WC_MAINT.gsfgWC.TextMatrix(1,0,"Description")
+Gui.F_WC_MAINT.gsfgWC.ColWidth(1,"2500")
+Gui.F_WC_MAINT.gsfgWC.TextMatrix(2,0,"Inspect?")
+Gui.F_WC_MAINT.gsfgWC.ColWidth(2,"800")
+
+Gui.F_WC_MAINT.gsfgWC.FixedRows(1)
+
+F.Intrinsic.Control.For(V.Local.iC,0,2,1)
+	Gui.F_WC_MAINT.gsfgWC.BuildStyle(2,V.Local.iC,"type","locked","true")
+	Gui.F_WC_MAINT.gsfgWC.BuildStyle(2,V.Local.iC,"format","alignment",4)
+F.Intrinsic.Control.Next(V.Local.iC)
+Gui.F_WC_MAINT.gsfgWC.BuildStyle(1,2,"type","CheckBox","")
+Gui.F_WC_MAINT.gsfgWC.BuildStyle(1,0,"Type","Locked",True)
+Gui.F_WC_MAINT.gsfgWC.BuildStyle(1,1,"Type","Locked",True)
+
+Gui.F_WC_MAINT.gsfgWC.ApplyStyle(0,2)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Buildstyle_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_WC_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_wc_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Buildstyle.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_WC_MAINT$}$Strider$}$10/19/2015
+${$1$}$$}$$}$1$}$14860$}$WC MAINTENANCE (RES005A-SCRIPT-1-HOOK)$}$10/19/2015 10:24:06 AM$}$(Program: RES005A; Screen: RES005A)
+
+${$1$}$$}$$}$0$}$14840$}$WC MAINTENANCE (RES005A-POPULATE-HOOK)$}$10/19/2015 10:23:33 AM$}$(Program: RES005A; Screen: RES005A)
+
+${$2$}$$}$$}$1$}$4$}$SQL$}$10/19/2015 10:24:58 AM$}$GCG_INSP_PASS
+GCG_INSPECTION_H
+GCG_INSPECTION_L
+GCG_INV_MAINT
+GCG_WC_MAINT
+${$2$}$$}$$}$0$}$2$}$GAB$}$10/19/2015 10:23:33 AM$}$GCG_INSP_PASS.GAS
+GCG_INV_MAINT.GAS
+GCG_QUALITY_INSPECTION.GAS
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$Wants to create an inspection form for Quality launched from the GUI. Ability to mark WC and Parts as Requiring Inspection, and save data to a separate table, that can be called up to review/edit by inspectors or supervisors with a password prompt.
+Program.Sub.Comments.End
+
