@@ -1,0 +1,303 @@
+Program.Sub.ScreenSU.Start
+gui.F_INV_MAINT..create
+gui.F_INV_MAINT..caption("Inventory Maintenance")
+gui.F_INV_MAINT..size(7600,6700)
+gui.F_INV_MAINT..minx(0)
+gui.F_INV_MAINT..miny(0)
+gui.F_INV_MAINT..position(0,0)
+gui.F_INV_MAINT..event(unload,F_INV_MAINT_unload)
+gui.F_INV_MAINT..alwaysontop(False)
+gui.F_INV_MAINT..fontname("Arial")
+gui.F_INV_MAINT..fontsize(8)
+gui.F_INV_MAINT..forecolor(0)
+gui.F_INV_MAINT..fontstyle(,,,,)
+gui.F_INV_MAINT..BackColor(-2147483633)
+gui.F_INV_MAINT..controlbox(True)
+gui.F_INV_MAINT..maxbutton(False)
+gui.F_INV_MAINT..minbutton(True)
+gui.F_INV_MAINT..mousepointer(0)
+gui.F_INV_MAINT..moveable(True)
+gui.F_INV_MAINT..sizeable(False)
+gui.F_INV_MAINT..ShowInTaskBar(True)
+gui.F_INV_MAINT..titlebar(True)
+gui.F_INV_MAINT.gsfgINV.create(gsflexgrid)
+gui.F_INV_MAINT.gsfgINV.FixedRows(0)
+gui.F_INV_MAINT.gsfgINV.FixedCols(0)
+gui.F_INV_MAINT.gsfgINV.visible(True)
+gui.F_INV_MAINT.gsfgINV.size(7150,5500)
+gui.F_INV_MAINT.gsfgINV.zorder(0)
+gui.F_INV_MAINT.gsfgINV.position(100,100)
+gui.F_INV_MAINT.gsfgINV.enabled(True)
+gui.F_INV_MAINT.cmdSave.create(button)
+gui.F_INV_MAINT.cmdSave.caption("Save")
+gui.F_INV_MAINT.cmdSave.visible(True)
+gui.F_INV_MAINT.cmdSave.size(855,375)
+gui.F_INV_MAINT.cmdSave.zorder(0)
+gui.F_INV_MAINT.cmdSave.position(100,5700)
+gui.F_INV_MAINT.cmdSave.enabled(True)
+gui.F_INV_MAINT.cmdSave.fontname("Arial")
+gui.F_INV_MAINT.cmdSave.fontsize(8)
+gui.F_INV_MAINT.cmdSave.event(click,cmdsave_click)
+gui.F_INV_MAINT.cmdSave.defaultvalue("")
+gui.F_INV_MAINT.cmdSave.controlgroup(0)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+
+Variable.Global.sPart.Declare(String)
+Variable.Global.sSQL.Declare(String)
+Variable.Global.iRows.Declare(Long,0)
+Variable.Global.sSaveArray.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+'Hook 10210 and 10120
+'Inventory maint
+V.Local.sError.Declare(String)
+V.Local.iRet.Declare(Long)
+
+'Hook 10120 setting script 1 name
+F.Intrinsic.Control.If(V.caller.Hook,=,10120)
+	V.Passed.000068.Set("Insp Check")
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+'script 1 button pressed
+'checks to see what part is selected. If none then ask to load all parts
+V.Global.sPart.Set(V.Passed.000007)
+F.Intrinsic.Control.If(V.Global.sPart,=,"")
+	F.Intrinsic.UI.Msgbox("No part is selected.  Load all parts?","Load all parts",1,V.Local.iRet)
+	F.Intrinsic.Control.If(V.Local.iRet,=,2)
+		F.Intrinsic.Control.End
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+'builds flexgrid
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+F.Intrinsic.Control.CallSub(Buildstyle)
+F.Intrinsic.Control.CallSub(Loadinv)
+Gui.F_INV_MAINT..Show
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_inv_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+program.sub.F_INV_MAINT_unload.start
+F.Intrinsic.Control.SetErrorHandler("F_INV_MAINT_unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("F_INV_MAINT_unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.F_INV_MAINT_unload.end
+
+program.sub.cmdsave_click.start
+F.Intrinsic.Control.SetErrorHandler("cmdsave_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iR.Declare(Long,1)
+V.Local.sRow.Declare(String)
+V.Local.sCol.Declare(String)
+
+
+Gui.F_INV_MAINT..Enabled(False)
+Gui.F_INV_MAINT..Visible(false)
+
+F.Intrinsic.UI.InvokeWaitDialog("Saving...","Save")
+'saves all rows
+F.ODBC.Connection!conx.OpenLocalRecordsetRW("rstSave",V.Global.sSQL)
+	F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstSave.EOF,=,True)
+	Gui.F_INV_MAINT.gsfgINV.ReadRow(V.local.iR,V.Local.sRow)
+	F.Intrinsic.String.Split(V.Local.sRow,"*!*",V.Local.sRow)
+	'checks to see if the checkbox is different from previously saved.
+	F.Intrinsic.Control.If(V.Local.sRow(3).long,<>,V.ODBC.conx!rstSave.FieldValLong!INSP_FLAG)
+		'checks to see if the fields is checked or not
+		F.Intrinsic.Control.If(V.Local.sRow(3),=,"1")
+			F.ODBC.conx!rstSave.Set!INSP_FLAG(1)
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstSave.Set!INSP_FLAG(0)
+		F.Intrinsic.Control.EndIf
+		F.ODBC.conx!rstSave.Update
+	F.Intrinsic.Control.EndIf
+F.ODBC.conx!rstSave.MoveNext
+F.Intrinsic.Math.Add(V.Local.iR,1,V.Local.iR)
+F.Intrinsic.Control.Loop
+F.ODBC.conx!rstSave.Close
+
+
+F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.CallSub("F_INV_MAINT_unload")
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdsave_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_inv_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.cmdsave_click.end
+
+Program.Sub.LoadINV.Start
+F.Intrinsic.Control.SetErrorHandler("LoadINV_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iR.Declare(Long)
+V.Local.sTemp.Declare(String)
+
+F.Intrinsic.UI.InvokeWaitDialog("Loading...")
+F.Intrinsic.Control.CallSub("UpdateINV")
+'if blank gather all parts if not select the specific part
+F.Intrinsic.Control.If(V.Global.sPart,=,"")
+	V.Global.sSQL.set("SELECT PART_NO, LOC, DESCR, INSP_FLAG FROM GCG_3511_INV_MAINT ORDER BY PART_NO ASC")
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("SELECT PART_NO, LOC, DESCR, INSP_FLAG FROM GCG_3511_INV_MAINT WHERE PART_NO='{0}'",V.Global.sPart.PSQLFriendly,V.Global.sSQL)
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!conx.OpenRecordsetRO("rstINV",V.Global.sSQL)
+Gui.F_INV_MAINT.gsfgINV.LoadRecordset("conx!rstINV",1)
+F.ODBC.conx!rstINV.Close
+'subtracts the blank row that is generated from loadrecordset and set the correct row count
+F.Intrinsic.Math.Sub(V.Screen.F_INV_MAINT!gsfgINV.Rows,1,V.Global.iRows)
+Gui.F_INV_MAINT.gsfgINV.Rows(V.Global.iRows)
+'subtracts the fixed row to get only the data rows
+F.Intrinsic.Math.Sub(V.Global.iRows,1,V.Global.iRows)
+
+F.Intrinsic.UI.CloseWaitDialog
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("LoadINV_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_inv_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.LoadINV.End
+
+Program.Sub.UpdateINV.Start
+F.Intrinsic.Control.SetErrorHandler("UpdateINV_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'gets all parts that are not in the inv maint table and adds them to it
+F.ODBC.Connection!conx.OpenRecordsetRO("rstINV","SELECT PART, LOCATION, DESCRIPTION FROM V_INVENTORY_MSTR WHERE PART NOT IN (SELECT PART_NO FROM GCG_3511_INV_MAINT) ORDER BY PART ASC")
+F.ODBC.Connection!conx.OpenRecordsetRW("rstINVMaint","SELECT * FROM GCG_3511_INV_MAINT")
+F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstINV.EOF,=,True)
+	F.ODBC.conx!rstINVMaint.AddNew
+	F.ODBC.conx!rstINVMaint.Set!PART_NO(V.ODBC.conx!rstINV.FieldValTrim!PART)
+	F.ODBC.conx!rstINVMaint.Set!LOC(V.ODBC.conx!rstINV.FieldValTrim!LOCATION)
+	F.ODBC.conx!rstINVMaint.Set!DESCR(V.ODBC.conx!rstINV.FieldValTrim!DESCRIPTION)
+	F.ODBC.conx!rstINVMaint.Set!INSP_FLAG(0)
+	F.ODBC.conx!rstINVMaint.Update
+	F.ODBC.conx!rstINV.MoveNext
+F.Intrinsic.Control.Loop
+F.ODBC.conx!rstINV.Close
+F.ODBC.conx!rstINVMaint.Close
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("UpdateINV_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_inv_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.UpdateINV.End
+
+Program.Sub.Buildstyle.Start
+F.Intrinsic.Control.SetErrorHandler("Buildstyle_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iC.Declare(Long)
+
+Gui.F_INV_MAINT.gsfgINV.Rows(1)
+Gui.F_INV_MAINT.gsfgINV.Cols(4)
+Gui.F_INV_MAINT.gsfgINV.TextMatrix(0,0,"Part")
+Gui.F_INV_MAINT.gsfgINV.ColWidth(0,"2500")
+Gui.F_INV_MAINT.gsfgINV.TextMatrix(1,0,"Loc")
+Gui.F_INV_MAINT.gsfgINV.ColWidth(1,"500")
+Gui.F_INV_MAINT.gsfgINV.TextMatrix(2,0,"Description")
+Gui.F_INV_MAINT.gsfgINV.ColWidth(2,"3000")
+Gui.F_INV_MAINT.gsfgINV.TextMatrix(3,0,"Inspect?")
+Gui.F_INV_MAINT.gsfgINV.ColWidth(3,"800")
+
+Gui.F_INV_MAINT.gsfgINV.Fixedrows(1)
+
+F.Intrinsic.Control.For(V.Local.iC,0,2,1)
+	Gui.F_INV_MAINT.gsfgINV.BuildStyle(2,V.Local.iC,"type","locked","true")
+	Gui.F_INV_MAINT.gsfgINV.BuildStyle(2,V.Local.iC,"format","alignment","4")
+F.Intrinsic.Control.Next(V.Local.iC)
+Gui.F_INV_MAINT.gsfgINV.BuildStyle(1,3,"type","CheckBox",)
+Gui.F_INV_MAINT.gsfgINV.BuildStyle(1,0,"Type","Locked",True)
+Gui.F_INV_MAINT.gsfgINV.BuildStyle(1,1,"Type","Locked",True)
+Gui.F_INV_MAINT.gsfgINV.BuildStyle(1,2,"Type","Locked",True)
+
+Gui.F_INV_MAINT.gsfgINV.ApplyStyle(0,2)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Buildstyle_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3511_INV_MAINT.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(F_inv_maint_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Buildstyle.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_INV_MAINT$}$Strider$}$10/19/2015
+${$1$}$$}$$}$1$}$10210$}$INS010B-SCRIPT-1-HOOK$}$10/19/2015 10:14:40 AM$}$(Program: INVMAIN; Screen: INS010B)
+
+${$1$}$$}$$}$0$}$10120$}$INS010B-POPULATE-HOOK$}$10/19/2015 10:13:29 AM$}$(Program: INVMAIN; Screen: INS010B)
+
+${$2$}$$}$$}$1$}$4$}$SQL$}$10/19/2015 10:15:30 AM$}$GCG_INSP_PASS
+GCG_INSPECTION_H
+GCG_INSPECTION_L
+GCG_INV_MAINT
+GCG_WC_MAINT
+${$2$}$$}$$}$0$}$2$}$$}$10/19/2015 10:13:29 AM$}$GCG_INSP_PASS.GAS
+GCG_QUALITY_INSPECTION.GAS
+GCG_WC_MAINT.GAS
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$Wants to create an inspection form for Quality launched from the GUI. Ability to mark WC and Parts as Requiring Inspection, and save data to a separate table, that can be called up to review/edit by inspectors or supervisors with a password prompt.
+Program.Sub.Comments.End
+
